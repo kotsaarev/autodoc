@@ -6,26 +6,104 @@
 //
 
 import UIKit
+import Combine
+import SafariServices
 
 class NewsViewController: UIViewController {
+    
+    private var collectionView: UICollectionView!
+    private var viewModel = NewsViewModel()
+    
+    private var cancellables = Set<AnyCancellable>()
+    private var dataSource: UICollectionViewDiffableDataSource<Int, NewsModel>!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let label = UILabel()
-        label.text = "Hello, Autodoc!"
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
+        setupCollectionView()
+        setupDataSource()
+        setupBindings()
         
-        view.addSubview(label)
+        Task { try? await viewModel.loadMore() }
+    }
+    
+    private func setupCollectionView() {
+        let layout = UICollectionViewCompositionalLayout { sectionIndex, _ in
+                let itemSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1.0),
+                    heightDimension: .absolute(150)
+                )
+                let item = NSCollectionLayoutItem(layoutSize: itemSize)
+                
+                let groupSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1.0),
+                    heightDimension: .absolute(150)
+                )
+                let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
+                
+                let section = NSCollectionLayoutSection(group: group)
+                section.interGroupSpacing = 10
+                
+                return section
+            }
+        
+        collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
+        collectionView.dataSource = dataSource
+        collectionView.delegate = self
+        collectionView.register(NewsCell.self, forCellWithReuseIdentifier: NewsCell.identifier)
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(collectionView)
         
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-            label.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            label.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            label.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            collectionView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
+    }
+    
+    private func setupDataSource() {
+        dataSource = UICollectionViewDiffableDataSource<Int, NewsModel>(collectionView: collectionView) {
+            (collectionView, indexPath, newsItem) -> UICollectionViewCell? in
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NewsCell.identifier, for: indexPath) as? NewsCell else {
+                return UICollectionViewCell()
+            }
+            
+            cell.configure(with: newsItem)
+            
+            return cell
+        }
+    }
+    
+    private func setupBindings() {
+        viewModel.$news
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] news in self?.applySnapshot(news) }
+            .store(in: &cancellables)
+    }
+    
+    private func applySnapshot(_ news: [NewsModel]) {
+        var snapshot = NSDiffableDataSourceSnapshot<Int, NewsModel>()
         
-        view.backgroundColor = .systemBackground
+        snapshot.appendSections([0])
+        snapshot.appendItems(news)
+        
+        dataSource.apply(snapshot, animatingDifferences: true)
+    }
+}
+
+// MARK: - UICollectionViewDelegate
+
+extension NewsViewController: UICollectionViewDelegate {
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let newsItem = dataSource.itemIdentifier(for: indexPath),
+              let url = URL(string: newsItem.fullUrl) else {
+            return
+        }
+        
+        let safariVC = SFSafariViewController(url: url)
+        present(safariVC, animated: true)
     }
 }
