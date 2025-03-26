@@ -5,7 +5,7 @@
 //  Created by Konstantin Kotsarev on 24.03.2025.
 //
 
-struct NewsModel: Decodable, Hashable {
+struct NewsModel: Decodable, Identifiable {
     let id: Int
     let title: String
     let description: String

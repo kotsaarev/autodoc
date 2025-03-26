@@ -15,7 +15,7 @@ class NewsViewController: UIViewController {
     private var viewModel = NewsViewModel()
     
     private var cancellables = Set<AnyCancellable>()
-    private var dataSource: UICollectionViewDiffableDataSource<Int, NewsModel>!
+    private var dataSource: UICollectionViewDiffableDataSource<NewsSection, NewsModel.ID>!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -64,9 +64,10 @@ class NewsViewController: UIViewController {
     }
     
     private func setupDataSource() {
-        dataSource = UICollectionViewDiffableDataSource<Int, NewsModel>(collectionView: collectionView) {
-            (collectionView, indexPath, newsItem) -> UICollectionViewCell? in
-            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NewsCell.identifier, for: indexPath) as? NewsCell else {
+        dataSource = UICollectionViewDiffableDataSource<NewsSection, NewsModel.ID>(collectionView: collectionView) {
+            [weak self] (collectionView, indexPath, identifier) -> UICollectionViewCell? in
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NewsCell.identifier, for: indexPath) as? NewsCell,
+                  let newsItem = self?.viewModel.news.first(where: { $0.id == identifier }) else {
                 return UICollectionViewCell()
             }
             
@@ -84,10 +85,10 @@ class NewsViewController: UIViewController {
     }
     
     private func applySnapshot(_ news: [NewsModel]) {
-        var snapshot = NSDiffableDataSourceSnapshot<Int, NewsModel>()
+        var snapshot = NSDiffableDataSourceSnapshot<NewsSection, NewsModel.ID>()
         
-        snapshot.appendSections([0])
-        snapshot.appendItems(news)
+        snapshot.appendSections([.main])
+        snapshot.appendItems(news.map({ $0.id }), toSection: .main)
         
         dataSource.apply(snapshot, animatingDifferences: true)
     }
@@ -98,7 +99,8 @@ class NewsViewController: UIViewController {
 extension NewsViewController: UICollectionViewDelegate {
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard let newsItem = dataSource.itemIdentifier(for: indexPath),
+        guard let identifier = dataSource.itemIdentifier(for: indexPath),
+              let newsItem = viewModel.news.first(where: { $0.id == identifier }),
               let url = URL(string: newsItem.fullUrl) else {
             return
         }
