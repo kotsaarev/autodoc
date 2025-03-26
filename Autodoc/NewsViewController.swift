@@ -10,6 +10,7 @@ import Combine
 import SafariServices
 
 class NewsViewController: UIViewController {
+    private let imageCache = ImageCache()
     
     private var collectionView: UICollectionView!
     private var viewModel = NewsViewModel()
@@ -67,11 +68,12 @@ class NewsViewController: UIViewController {
         dataSource = UICollectionViewDiffableDataSource<NewsSection, NewsModel.ID>(collectionView: collectionView) {
             [weak self] (collectionView, indexPath, identifier) -> UICollectionViewCell? in
             guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NewsCell.identifier, for: indexPath) as? NewsCell,
-                  let newsItem = self?.viewModel.news.first(where: { $0.id == identifier }) else {
+                  let newsItem = self?.viewModel.news.first(where: { $0.id == identifier }),
+                  let imageCache = self?.imageCache else {
                 return UICollectionViewCell()
             }
             
-            cell.configure(with: newsItem)
+            cell.configure(news: newsItem, imageCache: imageCache)
             
             return cell
         }

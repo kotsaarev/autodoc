@@ -10,8 +10,6 @@ import UIKit
 final class NewsCell: UICollectionViewCell {
     static let identifier = "NewsCell"
     
-    private let imageCache = ImageCache()
-    
     private let imageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
@@ -51,11 +49,10 @@ final class NewsCell: UICollectionViewCell {
     }
 }
 
-
 // MARK: - Methods
 
 extension NewsCell {
-    func configure(with news: NewsModel) {
+    func configure(news: NewsModel, imageCache: ImageCache) {
         Task {
             if let url = URL(string: news.titleImageUrl), let image = await imageCache.loadImage(url: url) {
                 DispatchQueue.main.async {
