@@ -25,7 +25,7 @@ class NewsViewController: UIViewController {
         setupDataSource()
         setupBindings()
         
-        Task { try? await viewModel.loadMore() }
+        loadMore()
     }
     
     private func setupCollectionView() {
@@ -94,6 +94,16 @@ class NewsViewController: UIViewController {
         
         dataSource.apply(snapshot, animatingDifferences: true)
     }
+    
+    private func loadMore() {
+        Task {
+            do {
+                try await viewModel.loadMore()
+            } catch {
+                print("Error loading more news: \(error)")
+            }
+        }
+    }
 }
 
 // MARK: - UICollectionViewDelegate
@@ -109,5 +119,16 @@ extension NewsViewController: UICollectionViewDelegate {
         
         let safariVC = SFSafariViewController(url: url)
         present(safariVC, animated: true)
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let offsetY = scrollView.contentOffset.y
+        let contentHeight = scrollView.contentSize.height
+        let height = scrollView.frame.size.height
+        
+        // Load more when 50% above the bottom
+        if offsetY > contentHeight - height * 1.5 {
+            loadMore()
+        }
     }
 }
