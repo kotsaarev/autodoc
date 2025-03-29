@@ -12,6 +12,6 @@ struct NewsModel: Decodable, Identifiable {
     let publishedDate: String
     let url: String
     let fullUrl: String
-    let titleImageUrl: String
+    let titleImageUrl: String? // "id": 8048 without this prop
     let categoryType: String
 }

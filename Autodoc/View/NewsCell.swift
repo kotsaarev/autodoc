@@ -59,14 +59,16 @@ extension NewsCell {
         
         imageView.image = nil
         titleLabel.text = news.title
-
+        
         Task {
-            if let url = URL(string: news.titleImageUrl), let image = await imageCache.loadImage(url: url) {
+            if let imageUrl = news.titleImageUrl,
+               let url = URL(string: imageUrl),
+               let image = await imageCache.loadImage(url: url) {
                 DispatchQueue.main.async { [weak self] in
                     guard self?.imageUrl == news.titleImageUrl else {
                         return
                     }
-
+                    
                     self?.imageView.image = image
                 }
             }
